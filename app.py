@@ -14,6 +14,7 @@ client = TwilioRestClient(account_sid, auth_token)
 
 app_number = '+17787650226'
 front_door = ['+16046840467', '+17787075262']
+access_code = '1234'
 
 numbers = {
   'Phil Jama': '+17787075262',
@@ -21,11 +22,7 @@ numbers = {
   'Ray Horan': '+16043537081',
   'Mason Lampard': '+16048038331',
 }
-permissions = {}#'+17787075262': datetime.datetime.now() + datetime.timedelta(seconds=120)}
- 
- 
-    #with resp.gather(numDigits=1, action="/handle-key", method="POST") as g:
-    #    g.say("To speak to a real monkey, press 1. Press any other key to start over.")
+permissions = {}#'+17787075262': datetime.datetime.now() + datetime.timedelta(seconds=120)} 
 
 def check_permissions():
     tmp_permissions = deepcopy(permissions)
@@ -49,13 +46,29 @@ def handle_call():
             resp.play(digits='www666')
             for number in permissions.iterkeys():
                 message = client.messages.create(to=number, from_=app_number, body="Door buzzed")
-        #elif code:
+        elif access_code:
+            with resp.gather(numDigits=4, action="/handle-key", method="POST") as g:
+                g.say("Enter access code")
         else:
             resp.dial(numbers['Phil Jama'])
     else:
         resp.dial(numbers['Phil Jama'])
 
     return str(resp)
+
+
+@app.route("/handle-key", methods=['GET', 'POST'])
+def handle_key():
+    digits = request.values.get('Digits', None)
+    print "Digits: %s" % digits
+    resp = twilio.twiml.Response()
+    if digits == access_code:
+        resp.play(digits='www666')
+        return str(resp)
+    else:
+        resp.say("Incorrect. Goodbye")
+        return str(resp)
+
 
 def get_expiry(secs):
    return datetime.datetime.now() + datetime.timedelta(seconds=secs)
