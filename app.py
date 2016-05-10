@@ -84,9 +84,10 @@ class AccessManager(object):
 
 
 class TwilioController(object):
-    def __init__(self, twilio_client, access_manager):
+    def __init__(self, twilio_client, access_manager, app_number):
         self.access_manager = access_manager
         self.twilio_client = twilio_client
+        self.app_number = app_number
 
     def handle_call(self, from_number):
         response = twilio.twiml.Response()
@@ -101,14 +102,15 @@ class TwilioController(object):
     def process_call(self, response):
         perms = self.access_manager.check_permissions()
         if len(perms) > 0:
-            response.play(digits='ww999')
+            response.play(digits='www')
+            response.play('http://jetcityorange.com/dtmf/DTMF-9.mp3')
             for number in perms.iterkeys():
                 message = client.messages.create(to=number, \
-                                                # from_=app_number, \
+                                                from_=self.app_number, \
                                                 body="Door buzzed")
         elif access_manager.access_pin:
             with response.gather(numDigits=4, action="/handle-pin", method="POST") as g:
-                g.say("Enter access codei followed by the hash key")
+                g.say("Enter access code followed by the hash key")
         else: # if no permissions set, and no access key, then forward the call
             primary_number = self.access_manager.primary_number
             response.dial(primary_number)
@@ -117,7 +119,8 @@ class TwilioController(object):
     def process_pin(self, from_number, digits):
         response = twilio.twiml.Response()
         if access_manager.is_valid_pin(digits):
-            response.play(digits='ww999')
+            response.play(digits='www')
+            response.play('http://jetcityorange.com/dtmf/DTMF-9.mp3')
         else:
             print "Incorrect access code from %s" % from_number
             primary_number = self.access_manager.primary_number
@@ -135,10 +138,10 @@ class TwilioController(object):
 app = Flask(__name__)
 
 account_sid = "AC7fdec117c8f2fdf9e1d34d5ef8485b9b"
-auth_token = ""
+auth_token = "<!--AUTH TOKEN-->"
 client = TwilioRestClient(account_sid, auth_token)
 
-# app_number = '+16042273188'
+app_number = '+16042273188'
 
 access_manager = AccessManager()
 access_manager.add_door_number('+16046886429')
@@ -146,7 +149,7 @@ access_manager.add_door_number('+17787075262') # debugging purposes
 access_manager.add_admin('Phil Jama', '+17787075262', is_primary=True)
 access_manager.add_admin('Luc', '+16046498269')
 
-controller = TwilioController(client, access_manager)
+controller = TwilioController(client, access_manager, app_number)
 
 @app.route("/doorbuzzer/voice", methods=['GET', 'POST'])
 def handle_call():
